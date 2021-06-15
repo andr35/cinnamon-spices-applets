@@ -1,102 +1,104 @@
 {
 	"layout": {
-        "type":"layout",
-        "pages":[
+		"type": "layout",
+		"pages": [
 			"providers",
 			"locations-page",
-            "presentation-section",
+			"presentation-section",
 			"units-page",
 			"info-section"
-        ],
-        "providers":{
-            "type":"page",
-            "title":"Weather",
-            "sections":[
+		],
+		"providers": {
+			"type": "page",
+			"title": "Weather",
+			"sections": [
 				"provider-options",
 				"weather-conditions"
-            ]
+			]
 		},
-		"locations-page":{
-            "type":"page",
-            "title":"Location",
-            "sections": [
+		"locations-page": {
+			"type": "page",
+			"title": "Location",
+			"sections": [
 				"location-section",
 				"location-store"
-            ]
-        },
-        "presentation-section":{
-            "type":"page",
-            "title":"Presentation",
-            "sections":[
+			]
+		},
+		"presentation-section": {
+			"type": "page",
+			"title": "Presentation",
+			"sections": [
 				"panel-options",
 				"presentation"
-            ]
-        },
-        "units-page":{
-            "type":"page",
-            "title":"Units, Icons and Keys",
-            "sections":[
+			]
+		},
+		"units-page": {
+			"type": "page",
+			"title": "Other options",
+			"sections": [
+				"temp-unit-section",
 				"units-section",
 				"icons",
 				"keybindings"
-            ]
+			]
 		},
-		"info-section":{
-            "type":"page",
-            "title":"Help",
-            "sections":[
+		"info-section": {
+			"type": "page",
+			"title": "Help",
+			"sections": [
 				"more-info",
 				"submit-issue"
 			]
 		},
-		"location-section" : {
-			"type":"section",
-			"title":"Location settings",
-			"keys":[
+		"location-section": {
+			"type": "section",
+			"title": "Location settings",
+			"keys": [
 				"manualLocation",
 				"location"
 			]
 		},
-		"location-store" : {
-			"type":"section",
-			"title":"Saved Locations",
-			"keys":[
+		"location-store": {
+			"type": "section",
+			"title": "Saved Locations",
+			"keys": [
 				"locationList",
 				"saveLocation"
 			]
 		},
-		"provider-options" : {
-			"type":"section",
-			"title":"Weather Provider Options",
-			"keys":[
+		"provider-options": {
+			"type": "section",
+			"title": "Weather Provider Options",
+			"keys": [
 				"dataService",
 				"apiKey",
 				"refreshInterval",
 				"forecastDays",
-				"forecastHours"
+				"forecastHours",
+				"immediatePrecip"
 			]
 		},
-		"weather-conditions" : {
-			"type":"section",
-			"title":"Weather conditions",
-			"keys":[
+		"weather-conditions": {
+			"type": "section",
+			"title": "Weather conditions",
+			"keys": [
 				"translateCondition",
 				"shortConditions"
 			]
 		},
-		"panel-options" : {
-			"type":"section",
-			"title":"Panel (Taskbar)",
-			"keys":[
+		"panel-options": {
+			"type": "section",
+			"title": "Panel (Taskbar)",
+			"keys": [
 				"showTextInPanel",
 				"showCommentInPanel",
 				"tempTextOverride"
 			]
 		},
-		"presentation" : {
-			"type":"section",
-			"title":"Popup menu",
-			"keys":[
+		"presentation": {
+			"type": "section",
+			"title": "Popup menu",
+			"keys": [
 				"verticalOrientation",
 				"forecastColumns",
 				"forecastRows",
@@ -105,48 +107,56 @@
 				"showForecastDates",
 				"shortHourlyTime",
 				"temperatureHighFirst",
-				"tempRussianStyle",
+				"displayWindAsText",
 				"locationLabelOverride"
 			]
 		},
-		"units-section" : {
-			"type":"section",
-			"title":"Units",
-			"keys":[
-				"temperatureUnit",
+		"units-section": {
+			"type": "section",
+			"title": "Other Units",
+			"keys": [
 				"windSpeedUnit",
 				"pressureUnit",
 				"distanceUnit"
 			]
 		},
-		"icons" : {
-			"type":"section",
-			"title":"Icons",
-			"keys":[
+		"temp-unit-section": {
+			"type": "section",
+			"title": "Temperature Unit",
+			"keys": [
+				"temperatureUnit",
+				"showBothTempUnits",
+				"tempRussianStyle"
+			]
+		},
+		"icons": {
+			"type": "section",
+			"title": "Icons",
+			"keys": [
 				"useSymbolicIcons",
 				"useCustomMenuIcons",
 				"useCustomAppletIcons"
 			]
 		},
-		"keybindings" : {
-			"type":"section",
-			"title":"Keybindings",
-			"keys":[
+		"keybindings": {
+			"type": "section",
+			"title": "Keybindings",
+			"keys": [
 				"keybinding"
 			]
 		},
 		"more-info": {
-			"type":"section",
+			"type": "section",
 			"title": "More about the Weather applet",
-			"keys":[
+			"keys": [
 				"more-info-label",
 				"getLocation"
 			]
 		},
-		"submit-issue" : {
-			"type":"section",
-			"title":"Report an issue",
-			"keys":[
+		"submit-issue": {
+			"type": "section",
+			"title": "Report an issue",
+			"keys": [
 				"issue-reporting-explanation",
 				"submitIssue",
 				"maintainer"
@@ -167,7 +177,7 @@
 			"OpenWeatherMap": "OpenWeatherMap",
 			"MET Norway": "MetNorway",
 			"Yahoo": "Yahoo",
-			"Danish Meteorologist Institute": "DanishMI",
+			"DMI Denmark": "DanishMI",
 			"Met Office UK (UK only)": "Met Office UK",
 			"US National Weather (US only)": "US Weather",
 			"Visual Crossing (key needed)": "Visual Crossing",
@@ -201,7 +211,7 @@
 		"indent": true,
 		"description": "Save current location to storage",
 		"callback": "saveCurrentLocation",
-		"tooltip": "Saves location information to file, so you can switch between them with buttons in the applet (what will appear if you have more than one)."
+		"tooltip": "Saves location information to file so you can switch between them with buttons in the applet, which will appear if you have more than one."
 	},
 	"getLocation": {
 		"type": "button",
@@ -217,7 +227,8 @@
 		"max": 360,
 		"units": "minutes",
 		"step": 5,
-		"description": "Update interval"
+		"description": "Update interval",
+		"tooltip": "If you are using a provider with API keys set it to an interval you won't run out of your quota with."
 	},
 	"forecastDays": {
 		"type": "spinbutton",
@@ -226,16 +237,23 @@
 		"max": 16,
 		"units": "days",
 		"step": 1,
-		"description": "Forecast length"
+		"description": "Forecast length",
+		"tooltip": "Maximum number of days that can be displayed, maximum rows and columns setting in the Presentation tab will affect the final number."
 	},
 	"forecastHours": {
 		"type": "spinbutton",
-		"default": 12,
+		"default": 48,
 		"min": 3,
-		"max": 48,
+		"max": 168,
 		"units": "hours",
 		"step": 1,
 		"description": "Hourly Forecast length"
+	},
+	"immediatePrecip": {
+		"type": "checkbox",
+		"default": false,
+		"description": "Enable minutely precipitation forecast",
+		"tooltip": "If you'd like to use this make sure you use your exact coordinates/address as location to help its accuracy. Currently implemented with OpenWeatherMap only."
 	},
 	"temperatureUnit": {
 		"type": "radiogroup",
@@ -243,10 +261,15 @@
 		"description": "Temperature unit",
 		"options": {
 			"Automatic": "automatic",
-			"celsius": "celsius",
-			"fahrenheit": "fahrenheit"
+			"Celsius": "celsius",
+			"Fahrenheit": "fahrenheit"
 		},
 		"tooltip": "Automatic will try to guess your preference based your current display language."
+	},
+	"showBothTempUnits": {
+		"type": "checkbox",
+		"default": false,
+		"description": "Show both temperature units at the same time"
 	},
 	"windSpeedUnit": {
 		"type": "combobox",
@@ -334,17 +357,50 @@
 		"description": "Maximum number of rows for forecast"
 	},
 	"locationList": {
-		"type" : "list",
-		"description" : "Your saved locations",
-		"columns" : [
-			{"id": "lat", "title": "Latitude", "type": "float", "min": -85, "max": 85},
-			{"id": "lon", "title": "Longitude", "type": "float", "min": -180, "max": 180},
-			{"id": "city", "title": "City", "type": "string"},
-			{"id": "country", "title": "Country", "type": "string"},
-			{"id": "timeZone", "title": "Timezone", "type": "string", "default": ""},
-			{"id": "entryText", "title": "Search entry", "type": "string", "default": ""}
+		"type": "list",
+		"description": "Your saved locations",
+		"tooltip": "You have to make sure the Search entry field is unique and your Timezone is in the IANA time zone format (e.g. 'Europe/London')",
+		"columns": [
+			{
+				"id": "lat",
+				"title": "Latitude",
+				"type": "float",
+				"min": -85,
+				"max": 85,
+				"step": 0.000105
+			},
+			{
+				"id": "lon",
+				"title": "Longitude",
+				"type": "float",
+				"min": -180,
+				"max": 180,
+				"step": 0.000105
+			},
+			{
+				"id": "city",
+				"title": "City",
+				"type": "string"
+			},
+			{
+				"id": "country",
+				"title": "Country",
+				"type": "string"
+			},
+			{
+				"id": "timeZone",
+				"title": "Timezone",
+				"type": "string",
+				"default": ""
+			},
+			{
+				"id": "entryText",
+				"title": "Search entry",
+				"type": "string",
+				"default": ""
+			}
 		],
-		"default" : []
+		"default": []
 	},
 	"showSunrise": {
 		"type": "checkbox",
@@ -361,11 +417,17 @@
 		"default": false,
 		"description": "Show high temperature first in forecast"
 	},
+	"displayWindAsText": {
+		"type": "checkbox",
+		"default": false,
+		"description": "Display wind direction as text",
+		"tooltip": "Like SE, N instead of direction icons."
+	},
 	"shortHourlyTime": {
 		"type": "checkbox",
 		"default": false,
 		"description": "Only display hours for hourly forecast time",
-		"tooltip": "Instead of 15:00 or 3 pm it will show up as 15 or 3 pm"
+		"tooltip": "Instead of 15:00 or 3:00 pm it will show up as 15 or 3 pm"
 	},
 	"showForecastDates": {
 		"type": "checkbox",
@@ -391,8 +453,7 @@
 	"shortConditions": {
 		"type": "checkbox",
 		"default": false,
-		"description": "Less verbose conditions",
-		"tooltip": "Currently only used with DarkSky."
+		"description": "Less verbose conditions"
 	},
 	"useSymbolicIcons": {
 		"type": "checkbox",
@@ -405,11 +466,10 @@
 		"tooltip": "Iconset is weather-icons by Erik Flowers",
 		"default": false,
 		"description": "Use custom icons in the popup menu"
-		
 	},
 	"more-info-label": {
 		"type": "label",
-		"description": "For detailed information about the applet please go to the Spices Website by clicking the button below. You can also comment and ask a questions to the community at this page by logging in with your Github account. You can also find information about known issues, troubleshooting, changelog and more."
+		"description": "For detailed information about the applet please go to the Spices Website to find info about known issues, troubleshooting, changelog and more by clicking the button below. Here you can ask questions etc in the comment section by logging in with your Github account."
 	},
 	"submitIssue": {
 		"type": "button",
@@ -424,7 +484,7 @@
 	},
 	"issue-reporting-explanation": {
 		"type": "label",
-		"description": "If you find an issue with this applet please make a report by clicking on the button below and login in with your Github account. Don't forget to write weather@mockturtl in the top Title field to make it easier for everyone to know that the issue is about the weather applet (the form is for all Cinnamon applets)."
+		"description": "If you find an issue with this applet please make a report by clicking on the button below and login in with your Github account. Before you start writing please make sure that the issue is not already submitted in the issues section. Don't forget to write weather@mockturtl in the top Title field to make it easier for everyone to know that the issue is about the weather applet (the form is for all Cinnamon applets)."
 	},
 	"loc-info": {
 		"type": "label",

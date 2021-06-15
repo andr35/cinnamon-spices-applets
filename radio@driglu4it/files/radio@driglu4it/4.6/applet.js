@@ -1,341 +1,201 @@
-const { TextIconApplet, AllowedLayout, AppletPopupMenu } = imports.ui.applet;
-const { PopupMenuManager, PopupSeparatorMenuItem, PopupMenuItem, PopupSubMenuMenuItem } = imports.ui.popupMenu;
-const { AppletSettings } = imports.ui.settings;
-const { spawnCommandLine, spawnCommandLineAsyncIO } = imports.misc.util;
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const Config_1 = require("Config");
+const ChannelStore_1 = require("ChannelStore");
+const ChannelList_1 = require("ui/ChannelList/ChannelList");
+const MpvHandler_1 = require("mpv/MpvHandler");
+const VolumeSlider_1 = require("ui/VolumeSlider");
+const RadioPopupMenu_1 = require("ui/RadioPopupMenu");
+const MediaControlToolbar_1 = require("ui/Toolbar/MediaControlToolbar");
+const PlayPauseButton_1 = require("ui/Toolbar/PlayPauseButton");
+const StopButton_1 = require("ui/Toolbar/StopButton");
+const SongInfoItem_1 = require("ui/InfoSection/SongInfoItem");
+const ChannelInfoItem_1 = require("ui/InfoSection/ChannelInfoItem");
+const DownloadButton_1 = require("ui/Toolbar/DownloadButton");
+const CopyButton_1 = require("ui/Toolbar/CopyButton");
+const downloadFromYoutube_1 = require("functions/downloadFromYoutube");
+const CheckInstallation_1 = require("mpv/CheckInstallation");
+const copyText_1 = require("functions/copyText");
+const Applet_1 = require("ui/Applet/Applet");
+const AppletIcon_1 = require("ui/Applet/AppletIcon");
+const AppletLabel_1 = require("ui/Applet/AppletLabel");
+const AppletTooltip_1 = require("ui/Applet/AppletTooltip");
+const YoutubeDownloadFinishedNotification_1 = require("ui/Notifications/YoutubeDownloadFinishedNotification");
+const YoutubeDownloadStartedNotification_1 = require("ui/Notifications/YoutubeDownloadStartedNotification");
+const YoutubeDownloadFailedNotification_1 = require("ui/Notifications/YoutubeDownloadFailedNotification");
+const GenericNotification_1 = require("ui/Notifications/GenericNotification");
 const { ScrollDirection } = imports.gi.Clutter;
-const Gettext = imports.gettext; // l10n support
-const { get_home_dir } = imports.gi.GLib;
-const { Clipboard, ClipboardType } = imports.gi.St;
-const { file_new_for_path } = imports.gi.Gio;
-
-const { MpvPlayerHandler } = require('./mpvPlayerHandler')
-const { PlayPauseIconMenuItem } = require('./playPauseIconMenuItem')
-
-const MPRIS_PLUGIN_URL = "https://github.com/hoyon/mpv-mpris/releases/download/0.5/mpris.so"
-
-// for i18n
-let UUID;
-function _(str) {
-  let customTranslation = Gettext.dgettext(UUID, str);
-  if (customTranslation != str) {
-    return customTranslation;
-  }
-  return Gettext.gettext(str);
-}
-
-
-class CinnamonRadioApplet extends TextIconApplet {
-  constructor(orientation, panel_height, instance_id) {
-    super(orientation, panel_height, instance_id);
-
-    // Allow Applet to be used on vertical and horizontal panels. By default only horizontal panels are allowed
-    this.setAllowedLayout(AllowedLayout.BOTH);
-
-    // for i18n
-    UUID = __meta.uuid;
-    Gettext.bindtextdomain(UUID, get_home_dir() + "/.local/share/locale");
-
-    this.settings = new AppletSettings(this, __meta.uuid, instance_id);
-    this._initSettings()
-    this._trimChannelList()
-
-    this._initMpvPlayer()
-    const initialChannelName = this._getChannelName({ channelUrl: this.mpvPlayer.getRunningRadioUrl() })
-    this._initGui(orientation, initialChannelName)
-  }
-
-  _initSettings() {
-    // bind properties 
-    this.settings.bind("icon-type", "icon_type", this.set_icon);
-    this.settings.bind("color-on", "color_on", this._setIconColor);
-    this.settings.bind("tree", "channel_list", this.on_channel_list_update);
-    this.settings.bind("channel-on-panel", "show_channel_on_panel", this.on_show_channel_on_panel_changed)
-    this.settings.bind("initial-volume", "custom_initial_volume");
-    this.settings.bind("keep-volume-between-sessions", "keep_volume_between_sessions")
-    this.settings.bind("last-volume", "last_volume")
-  }
-
-  _initMpvPlayer() {
-    const configPath = `${get_home_dir()}/.cinnamon/configs/${__meta.uuid}`;
-    const mprisPluginPath = configPath + '/.mpris.so'
-
-    this.mpvPlayer = new MpvPlayerHandler({
-      mprisPluginPath: mprisPluginPath,
-      _handleRadioStopped: (...args) => this._handleRadioStopped(args),
-      _getInitialVolume: () => this._getInitialVolume(),
-      _handleRadioChannelChangedPaused: (...args) => this._handleRadioChannelChangedPaused(...args),
-      _handleVolumeChanged: (...args) => this.set_applet_tooltip(...args)
-
-    })
-
-    this.mpvPlayer.init()
-
-  }
-
-  _handleRadioChannelChangedPaused(channelUrl) {
-    const menuItem = this._getChannelMenuItem(channelUrl)
-    if (menuItem) this._changeSetCurrentMenuItem(menuItem)
-  }
-
-  _handleRadioStopped(volume) {
-    if (this.keep_volume_between_sessions) this.last_volume = volume
-    this._changeSetCurrentMenuItem(this.stopitem)
-  }
-
-  _initGui(orientation, initialChannelName) {
-    this.set_icon();
-    this._createMenu({ currentChannelName: initialChannelName, orientation })
-    this._createContextMenu()
-    this.actor.connect('scroll-event', (actor, event) => this._on_mouse_scroll(event));
-  }
-
-  _setIconColor() {
-    const color = (this.mpvPlayer.getPlayPauseStatus() === "Playing") ? this.color_on : this._getThemeIconColor()
-    this.actor.style = `color: ${color}`
-  }
-
-  _getThemeIconColor() {
-
-    let iconThemeColor
-
-    try {
-      iconThemeColor = this.actor.get_theme_node().get_icon_colors().foreground.to_string()
-    } catch (error) {
-      global.logError(`Couldn't set theme icon color. Using white instead. The following error occured: ${error}`)
-      iconThemeColor = "white"
-    }
-
-    return iconThemeColor
-
-  }
-
-  set_icon() {
-    if (this.icon_type === "SYMBOLIC") this.set_applet_icon_symbolic_name('radioapplet')
-    else this.set_applet_icon_name(`radioapplet-${this.icon_type.toLowerCase()}`)
-  }
-
-  set_applet_label(nameCurrentMenuItem) {
-    const text = (this.mpvPlayer.getPlayPauseStatus() === "Playing" && this.show_channel_on_panel)
-      ? " " + nameCurrentMenuItem : ""
-    super.set_applet_label(text)
-  }
-
-  _trimChannelList() {
-    this.channel_list.forEach(channel => channel.url = channel.url.trim())
-  }
-
-  on_streamurl_button_pressed() {
-    spawnCommandLine("xdg-open https://streamurl.link");
-  }
-
-  on_radiolist_button_pressed() {
-    spawnCommandLine("xdg-open https://wiki.ubuntuusers.de/Internetradio/Stationen");
-  }
-
-  on_channel_list_update() {
-    this._trimChannelList()
-    this.menu.removeAll();
-    this.currentMenuItem = null;
-    const currentChannelName = this._getChannelName({ channelUrl: this.mpvPlayer.getRunningRadioUrl() })
-    this._createMenu({ currentChannelName: currentChannelName })
-  }
-
-  on_show_channel_on_panel_changed() {
-    const currentChannelName = this._getChannelName({ channelUrl: this.mpvPlayer.getRunningRadioUrl() })
-    this.set_applet_label(currentChannelName)
-  }
-
-  // TODO: what is when two Channels have the same Name? :O
-  _getChannelName({ channelUrl }) {
-    let channel = this.channel_list.find(cnl => cnl.url === channelUrl)
-    if (!channel || channel.inc === false) channel = false
-
-    return channel.name
-  }
-
-  _getInitialVolume() {
-    return this.keep_volume_between_sessions ? this.last_volume : this.custom_initial_volume
-  }
-
-  async _on_radio_channel_clicked(e, channel) {
-    //this._changeSetCurrentMenuItem(e)
-    try {
-      await this.mpvPlayer.startChangeRadioChannel(channel.url)
-    } catch (error) {
-      this._notify_send(_("Can't play  %s").format(channel.name) + ". " + _("Make sure that the URL is valid and you have a stable internet connection. Don't hestitate to open an Issue on Github if the problem persists."))
-      global.logError(error)
-      return
-    }
-  }
-
-  _createMenu({ currentChannelName, orientation }) {
-
-    if (!this.menu) {
-      const menuManager = new PopupMenuManager(this);
-      this.menu = new AppletPopupMenu(this, orientation);
-      menuManager.addMenu(this.menu);
-    }
-
-    this.radioListSubMenu = this._createRadioSubMenu({ currentChannelName: currentChannelName })
-    this.menu.addMenuItem(this.radioListSubMenu)
-
-    // stop Item
-    this.stopitem = new PopupMenuItem(_("Stop"));
-    this.menu.addMenuItem(this.stopitem);
-    if (!currentChannelName) this._changeSetCurrentMenuItem(this.stopitem)
-    this.stopitem.connect('activate', () => { this._on_stop_item_clicked(); });
-  }
-
-  _createRadioSubMenu({ currentChannelName }) {
-    const radioListSubMenu = new PopupSubMenuMenuItem(_("List of stations"))
-
-    this.channel_list.forEach(channel => {
-      if (channel.inc !== true) return
-
-      const channelItem = new PlayPauseIconMenuItem(channel.name);
-      if (channel.name === currentChannelName) this._changeSetCurrentMenuItem(channelItem)
-      radioListSubMenu.menu.addMenuItem(channelItem);
-      channelItem.connect('activate', (e) => { this._on_radio_channel_clicked(e, channel) });
+const { getAppletDefinition } = imports.ui.appletManager;
+const { panelManager } = imports.ui.main;
+const { IconType } = imports.gi.St;
+function main(metadata, orientation, panelHeight, instanceId) {
+    const appletDefinition = getAppletDefinition({
+        applet_id: instanceId
     });
-
-    return radioListSubMenu
-  }
-
-  _createContextMenu() {
-    const copyTitleItem = new PopupMenuItem(_("Copy current song title"));
-    copyTitleItem.connect('activate', () => { this._on_copy_song(); });
-    this._applet_context_menu.addMenuItem(copyTitleItem, 0)
-    this._applet_context_menu.addMenuItem(new PopupSeparatorMenuItem());
-  }
-
-  _on_copy_song() {
-    try {
-      const currentSong = this.mpvPlayer.getCurrentSong()
-      Clipboard.get_default().set_text(ClipboardType.CLIPBOARD, currentSong);
-    } catch (e) {
-      this._notify_send(_("Can't copy current Song. Is the Radio playing?"))
-      //global.logError(e)
-    }
-  }
-
-
-  _getChannelMenuItem(channelUrl) {
-
-    const menuItems = this.radioListSubMenu.menu._getMenuItems()
-    const channel = this.channel_list.find(channel => channel.url === channelUrl)
-
-    // For some reason this method is sometimes called when a url is change in another play than mpv... TODO: proper fix
-    if (!channel) return
-
-    const channelName = channel.name
-    const menuItem = menuItems.find(menuItem => menuItem.label.text === channelName)
-
-    return menuItem
-  }
-
-  _on_stop_item_clicked() {
-    this.mpvPlayer.stopRadio()
-  }
-
-  _setIconToMenuItem({ menuItem }) {
-
-    if (this.currentMenuItem) {
-      this.currentMenuItem.setShowDot(false)
-      if (this.currentMenuItem !== this.stopitem) {
-        this.currentMenuItem.changePlayPauseOffStatus("OFF")
-      }
-    }
-
-    if (menuItem === this.stopitem) {
-      menuItem.setShowDot(true);
-    } else {
-      menuItem.changePlayPauseOffStatus(this.mpvPlayer.getPlayPauseStatus())
-    }
-  }
-
-  set_applet_tooltip(stop, volume) {
-    const text = (stop) ? "Radio++" : _("Volume: ") + volume.toString() + "%"
-    super.set_applet_tooltip(text)
-  }
-
-  _changeSetCurrentMenuItem(activatedMenuItem) {
-
-    const nameCurrentMenuItem = activatedMenuItem.label.text
-
-    this._setIconToMenuItem({ menuItem: activatedMenuItem })
-
-    if (nameCurrentMenuItem === "Stop") this.set_applet_tooltip(true)
-
-    this.set_applet_label(nameCurrentMenuItem)
-    this._setIconColor();
-
-    this.currentMenuItem = activatedMenuItem;
-
-  }
-
-  // sends a notification but only if there hasn't been already the same notification in the last 10 seks
-  _notify_send(notificationMsg) {
-    const currentTime = Date.now()
-
-    // preventing "reference to ... is undefined" in log
-    if (!this.timeLastNotification) this.timeLastNotification = 0
-    if (!this.lastNotificationMsg) this.lastNotificationMsg = null
-
-    const timeDiff = currentTime - this.timeLastNotification
-    if (timeDiff < 10000 && this.lastNotificationMsg === notificationMsg) return
-
-    const iconPath = `${__meta.path}/icon.png`;
-    spawnCommandLine('notify-send --hint=int:transient:1 --expire-time=10000 "' + notificationMsg + '" -i ' + iconPath);
-
-    this.timeLastNotification = currentTime
-    this.lastNotificationMsg = notificationMsg
-  }
-
-  _check_dependencies() {
-    if (!file_new_for_path(this.mpvPlayer.mprisPluginPath).query_exists(null)) {
-      const parentDir = __meta.path.split('/').slice(0, -1).join('/')
-
-      spawnCommandLineAsyncIO(`python3  ${parentDir}/download-dialog.py`, (stdout) => {
-        if (stdout.trim() == 'Continue') {
-          spawnCommandLineAsyncIO(`wget ${MPRIS_PLUGIN_URL} -O ${this.mpvPlayer.mprisPluginPath}`);
+    const panel = panelManager.panels.find(panel => (panel === null || panel === void 0 ? void 0 : panel.panelId) === appletDefinition.panelId);
+    panel.connect('icon-size-changed', () => appletIcon.updateIconSize());
+    const appletIcon = AppletIcon_1.createAppletIcon({
+        locationLabel: appletDefinition.location_label,
+        panel
+    });
+    const appletLabel = AppletLabel_1.createAppletLabel();
+    const applet = Applet_1.createApplet({
+        icon: appletIcon.actor,
+        label: appletLabel.actor,
+        instanceId,
+        orientation,
+        panelHeight,
+        onClick: handleAppletClicked,
+        onScroll: handleScroll,
+        onMiddleClick: () => mpvHandler.togglePlayPause(),
+        onAppletRemovedFromPanel: () => mpvHandler.stop()
+    });
+    const appletTooltip = AppletTooltip_1.createAppletTooltip({
+        applet,
+        orientation
+    });
+    const configs = Config_1.createConfig({
+        uuid: __meta.uuid,
+        instanceId,
+        onIconChanged: handleIconTypeChanged,
+        onIconColorPlayingChanged: (color) => {
+            appletIcon.setColorWhenPlaying(color);
+        },
+        onIconColorPausedChanged: (color) => {
+            appletIcon.setColorWhenPaused(color);
+        },
+        onChannelOnPanelChanged: (channelOnPanel) => {
+            appletLabel.setVisibility(channelOnPanel);
+        },
+        onMyStationsChanged: handleStationsUpdated,
+    });
+    const channelStore = new ChannelStore_1.ChannelStore(configs.userStations);
+    const channelList = ChannelList_1.createChannelList({
+        stationNames: channelStore.activatedChannelNames,
+        onChannelClicked: handleChannelClicked
+    });
+    const volumeSlider = new VolumeSlider_1.VolumeSlider({
+        onValueChanged: (volume) => mpvHandler.setVolume(volume)
+    });
+    const songInfoItem = SongInfoItem_1.createSongInfoItem();
+    const channelInfoItem = ChannelInfoItem_1.createChannelInfoItem();
+    const playPauseBtn = PlayPauseButton_1.createPlayPauseButton({
+        onClick: () => mpvHandler.togglePlayPause()
+    });
+    const stopBtn = StopButton_1.createStopBtn({
+        onClick: () => mpvHandler.stop()
+    });
+    const downloadBtn = DownloadButton_1.createDownloadButton({
+        onClick: handleDownloadBtnClicked
+    });
+    const copyBtn = CopyButton_1.createCopyButton({
+        onClick: () => copyText_1.copyText(mpvHandler.getCurrentTitle())
+    });
+    const mediaControlToolbar = MediaControlToolbar_1.createMediaControlToolbar({
+        controlBtns: [playPauseBtn.actor, downloadBtn.actor, copyBtn.actor, stopBtn.actor]
+    });
+    const popupMenu = RadioPopupMenu_1.createRadioPopupMenu({
+        radioApplet: applet,
+        orientation,
+        channelList: channelList.actor,
+        volumeSlider,
+        songInfoItem: songInfoItem.actor,
+        channelInfoItem: channelInfoItem.actor,
+        mediaControlToolbar
+    });
+    async function handleAppletClicked() {
+        try {
+            await CheckInstallation_1.installMpvWithMpris();
+            popupMenu.toggle();
+            channelList.open();
         }
-      })
-      return false;
+        catch (error) {
+            const notificationText = "Couldn't start the applet. Make sure mpv is installed and the mpv mpris plugin saved in the configs folder.";
+            GenericNotification_1.notify({ text: notificationText });
+        }
     }
-
-    else {
-
-      if (!file_new_for_path(`/usr/bin/mpv`).query_exists(null)) {
-        this._notify_send(_("Please install the '%s' package.").format("mpv"));
-        spawnCommandLine(`apturl apt://mpv`);
-        return false;
-      }
-
+    function handleScroll(scrollDirection) {
+        const volumeChange = scrollDirection === ScrollDirection.UP ? 5 : -5;
+        mpvHandler.increaseDecreaseVolume(volumeChange);
     }
-    return true;
-  }
-
-  on_applet_clicked() {
-    if (this._check_dependencies()) {
-      this.menu.toggle();
-      this.radioListSubMenu.menu.open(true);
+    function handleRadioInitialized(playbackStatus, volume) {
+        if (playbackStatus === 'Stopped') {
+            return;
+        }
+        popupMenu.radioActive = true;
+        handlePlaybackstatusChanged(playbackStatus);
+        handleVolumeChanged(volume);
+        handleUrlChanged(configs.lastUrl);
     }
-  }
-
-  on_applet_removed_from_panel() {
-    this.mpvPlayer.stopRadio()
-    this.settings.finalize();
-  }
-
-  _on_mouse_scroll(event) {
-    const direction = event.get_scroll_direction();
-    const volumeChange = direction === ScrollDirection.UP ? 5 : -5
-    const volumeChanged = this.mpvPlayer.increaseDecreaseVolume(volumeChange)
-
-    if (!volumeChanged && volumeChange > 0) this._notify_send(_("Can't increase Volume. Volume already at maximum."))
-  }
-};
-
-function main(metadata, orientation, panel_height, instance_id) {
-  return new CinnamonRadioApplet(orientation, panel_height, instance_id);
+    function handleChannelClicked(name) {
+        const channelUrl = channelStore.getChannelUrl(name);
+        mpvHandler.setChannelUrl(channelUrl);
+    }
+    function handleTitleChanged(title) {
+        songInfoItem.setSongTitle(title);
+    }
+    function handleVolumeChanged(volume) {
+        volumeSlider.value = volume;
+        appletTooltip.setVolume(volume);
+    }
+    function handleIconTypeChanged(iconType) {
+        appletIcon.setIconType(iconType);
+    }
+    function handleStationsUpdated(stations) {
+        const stationsChanged = channelStore.checkListChanged(stations);
+        if (!stationsChanged)
+            return;
+        channelStore.channelList = stations;
+        channelList.setStationNames(channelStore.activatedChannelNames);
+        const lastUrlValid = channelStore.checkUrlValid(configs.lastUrl);
+        if (!lastUrlValid)
+            mpvHandler.stop();
+    }
+    function handlePlaybackstatusChanged(playbackstatus, lastVolume) {
+        if (playbackstatus === 'Stopped')
+            handleVolumeChanged(null);
+        if (playbackstatus === 'Stopped')
+            handleUrlChanged(null);
+        channelList.setPlaybackstatus(playbackstatus);
+        appletIcon.setPlaybackStatus(playbackstatus);
+        popupMenu.radioActive = (playbackstatus !== 'Stopped');
+        if (playbackstatus === 'Playing' || playbackstatus === 'Paused') {
+            playPauseBtn.setPlaybackStatus(playbackstatus);
+        }
+        if (lastVolume != null)
+            configs.lastVolume = lastVolume;
+    }
+    function handleUrlChanged(url) {
+        const channelName = url ? channelStore.getChannelName(url) : null;
+        appletLabel.setText(channelName);
+        channelList.setCurrentChannel(channelName);
+        channelInfoItem.setChannel(channelName);
+        configs.lastUrl = url;
+    }
+    function handleDownloadBtnClicked() {
+        const title = mpvHandler.getCurrentTitle();
+        const downloadProcess = downloadFromYoutube_1.downloadSongFromYoutube({
+            downloadDir: configs.musicDownloadDir,
+            title,
+            onDownloadFinished: (path) => YoutubeDownloadFinishedNotification_1.notifyYoutubeDownloadFinished({
+                downloadPath: path
+            }),
+            onDownloadFailed: YoutubeDownloadFailedNotification_1.notifyYoutubeDownloadFailed
+        });
+        YoutubeDownloadStartedNotification_1.notifyYoutubeDownloadStarted({
+            title,
+            onCancelClicked: () => downloadProcess.cancel()
+        });
+    }
+    const mpvHandler = MpvHandler_1.createMpvHandler({
+        getInitialVolume: () => { return configs.initialVolume; },
+        onInitialized: handleRadioInitialized,
+        onVolumeChanged: handleVolumeChanged,
+        checkUrlValid: (url) => channelStore.checkUrlValid(url),
+        onTitleChanged: handleTitleChanged,
+        onPlaybackstatusChanged: handlePlaybackstatusChanged,
+        initialUrl: configs.lastUrl,
+        onUrlChanged: handleUrlChanged
+    });
+    return applet;
 }
